@@ -1,0 +1,258 @@
+---
+title: "Course Project"
+date: " "
+output: html_document
+---
+
+
+
+```{r}
+library(readr)
+library(ggplot2)
+library(gridExtra)
+covid <- read_csv("Downloads/covid.csv")
+```
+
+<br> <font size="5">Inroduction</font> <br> 
+The data set we are going to use is from the WHO website: https://data.cdc.gov/Public-Health-Surveillance/Rates-of-COVID-19-Cases-or-Deaths-by-Age-Group-and/3rge-nu2a<br>
+The data set includes several important variables such as age groups, vaccine types, infection rates and death rates. In this project, I am interested in the is there any difference under vaccine condition and age groups. I think the question is meaningful since we can identify if the vaccine is effective or not. We can also find which age groups are more likely to get infected.<br>
+I subsetted the original data frame and make a new one called covid_new. The covid_new data set has three variables, two categorical variables and a numeric variable. The Age_group variable is a categorcial variable shows the age groups of the sample. The condition variable is a categorical variable with only 2 conditions: vaccinated or not unvaccinated. The case_rate variable is the numeric variable shows the infection rate of the sample. I did the same thing for the death rate data. The death rate data frame is called covid_new_death. The variable Age_group and condition variable are the same as the covid_new data frame. The death_rate variable is the overall death rate for people in the test.
+
+
+<br> <font size="5">Background</font> <br> 
+Started Janurary 2020, the covid-19 pandemic had swept the world for two years. Until now there had been more than 440 million people got infected and there are also nearly 6 million people died because of the virus. To prevent and control the pandemic, scientists developed the vaccines to help decrease the infection and death rate. In this project, I am goingt to research The infection rates and death rates for people in different vaccine conditions and people in different age groups. 
+
+
+<br> <font size="5"> Univariant test</font> <br> 
+<br> <font size="4"> Case Rates</font> <br> 
+```{r, echo=FALSE} 
+covid_case = covid[covid$outcome == "case",]
+covid_case$caserate_vaccine <- covid_case$`Vaccinated with outcome`/ covid_case$`Fully vaccinated population`
+covid_case$caserate_unvaccine <- covid_case$`Unvaccinated with outcome`/covid_case$`Unvaccinated population`
+covid_1 <- data.frame(covid_case$`Age group`[1:252],covid_case$caserate_vaccine[1:252])
+covid_1$condition <- "vaccinated"
+colnames(covid_1) <- c("Age_group","case_rate","condition")
+# Create a new data frame covid_1, contains vaccinated case rate, age group and vaccine conditions.
+covid_2 <- data.frame(covid_case$`Age group`[1:252],covid_case$caserate_unvaccine[1:252])
+covid_2$condition <- "unvaccinated"
+colnames(covid_2) <- c("Age_group","case_rate","condition")
+# Create a new data frame covid_2, contains vaccinated case rate, age group and vaccine conditions.
+covid_new <- rbind(covid_1,covid_2)
+# Bind the two data frames with two categorical variables, age groups and vaccine condition
+```
+
+
+
+```{r, echo=FALSE} 
+summary(covid_1$case_rate)
+summary(covid_2$case_rate)
+```
+<br>
+We can see the mean infection rate for vaccinated people is 0.0016, for unvaccinated people is 0.005, which is much higher.
+```{r,echo = FALSE}
+p1 <- ggplot(data=covid_case , aes(x=month, y=`Vaccinated with outcome`,group=1)) +
+  geom_line()
+p2 <- ggplot(data=covid_case , aes(x=month, y=`Unvaccinated with outcome`,group=1)) +
+  geom_line()
+grid.arrange(p1,p2,ncol=2)
+```
+<br>We can see through the plots that each month there are much more unvaccinated people got infected by covid than the people who got fully vaccinated.<br>
+```{r,echo = FALSE}
+ggplot(covid_new, aes(x=case_rate))+
+  geom_histogram(bins=30)+
+  xlab("infection rate")+
+  ggtitle("Histogram of infection rate")
+```
+
+<br> From the plot, we can see that the data is extremely right skewed. So we should do log transformation to make the dependent variable follow normal distribution<br>
+```{r, echo=FALSE}
+ggplot(covid_new, aes(x=log(case_rate)))+
+  geom_histogram(bins=30)+
+  xlab("log infection rate")+
+  ggtitle("Histogram of infection rate (adjusted)")
+```
+<br> The logged data follows normal distribution much better, so I will use the <br>
+```{r, echo=FALSE}
+ggplot(covid_new, aes(x=Age_group, y=case_rate)) + 
+  geom_boxplot()+
+  ggtitle("Box plot of infection rate vs age groups") +
+  xlab("age groups") + 
+  ylab("infection rate")+
+  ylim(0,0.015)
+```
+<br> From the plot, we can see that there is no significance difference between infection rate among age groups<br>
+```{r, echo=FALSE}
+ggplot(covid_new, aes(x=condition, y=case_rate)) + 
+  geom_boxplot()+
+  ggtitle("Box plot of infection rate vs vaccine condition") +
+  xlab("vaccine condition") + 
+  ylab("infection rate")
+```
+
+<br> From the plot, we can see that there is significance difference between infection rate among get vaccinated or not<br>
+
+<br> <font size="4"> Death Rates</font> <br> 
+```{r, echo=FALSE} 
+covid_death = covid[covid$outcome == "death",]
+covid_death$deathrate_vaccine <- covid_death$`Vaccinated with outcome`/covid_death$`Fully vaccinated population`
+covid_death$deathrate_unvaccine <- covid_death$`Unvaccinated with outcome`/covid_death$`Unvaccinated population`
+covid_3 <- data.frame(covid_death$`Age group`[1:234],covid_death$deathrate_vaccine[1:234])
+covid_4 <- data.frame(covid_death$`Age group`[1:234],covid_death$deathrate_unvaccine[1:234])
+covid_3$condition <- "vaccinated"
+colnames(covid_3) <- c("Age_group","death_rate","condition")
+covid_4$condition <- "unvaccinated"
+colnames(covid_4) <- c("Age_group","death_rate","condition")
+covid_new_death <- rbind(covid_3,covid_4)
+```
+
+```{r,echo = FALSE}
+summary(covid_3$death_rate)
+summary(covid_4$death_rate)
+```
+<br>
+We can see the mean death rate for vaccinated people is 0.0000136, for unvaccinated people is 0.000141, which is much higher.
+```{r,echo = FALSE}
+p3 <- ggplot(data=covid_death , aes(x=month, y=`Vaccinated with outcome`,group=1)) +
+  geom_line()
+p4 <- ggplot(data=covid_death , aes(x=month, y=`Unvaccinated with outcome`,group=1)) +
+  geom_line()
+grid.arrange(p3,p4,ncol=2)
+```
+<br>We can see through the plots that each month there are much more unvaccinated people died because of covid than the people who got fully vaccinated.<br>
+```{r,echo = FALSE}
+ggplot(covid_new_death, aes(x=death_rate))+
+  geom_histogram(bins=30)+
+  xlab("death rate")+
+  ggtitle("Histogram of death rate")
+```
+<br> From the plot, we can see that the data is extremely right skewed. So we should do log transformation to make the dependent variable follow normal distribution<br>
+
+```{r,echo = FALSE}
+ggplot(covid_new_death, aes(x=log(death_rate)))+
+  geom_histogram(bins=30)+
+  xlab("death rate")+
+  ggtitle("Histogram of death rate")
+```
+<br> Now the data looks much better, I will use the log transformed data in the next model.
+
+```{r, echo=FALSE}
+ggplot(covid_new_death, aes(x=Age_group, y=death_rate)) + 
+  geom_boxplot()+
+  ggtitle("Box plot of death rate vs age groups") +
+  xlab("age groups") + 
+  ylab("death rate")+
+  ylim(0,0.001)
+```
+<br> From the plot, we can see that there is significant difference between death rate among age groups. Higher age groups people have much higher average death rates.<br>
+
+```{r, echo=FALSE}
+ggplot(covid_new_death, aes(x=condition, y=death_rate)) + 
+  geom_boxplot()+
+  ggtitle("Box plot of death rate vs vaccine condition") +
+  xlab("vaccine condition") + 
+  ylab("death rate")
+```
+<br> From the plot, we can see that there is significance difference between death rate among get vaccinated or not. The death rate of vaccinated people is extremely low.<br>
+
+<br> <font size="5"> Model Selections</font> <br>  
+I will use the balanced two-way anova model to fit the infection rate and death rate data frame.<br>
+Model: $Y_{ijk}=\mu_{..}+\alpha_i+\beta_j+(\alpha\beta)_{ij}+\epsilon_{ijk}$,Where $i=1,...,a,j=1,...,b,k=1,...,n$<br>
+$\mu_{..}=\sum_{i=1}^{a}\sum_{i=1}^{b}\mu_{ij}/ab$<br>$\mu_{i.}=\sum_{i=1}^{b}\mu_{ij}/b$<br> $\mu_{.j}=\sum_{i=1}^{a}\mu_{ij}/a$<br>
+$\alpha_i=\mu_{i.}-\mu_{..},\beta_j=\mu_{.j}-\mu_{..},(\alpha\beta)_{ij}=\mu_{ij}-\mu_{i.}-\mu_{.j}+\mu_{..}$<br>
+We selected this model because we are going to identify if there are significant difference in infection rate and death rate among two groups, so the two_anova model is appropriate.
+
+<br> <font size="5"> Inferential Analysis</font> <br> 
+<br> <font size="4"> Inferential Analysis for infection rate</font> <br> 
+```{r, echo=FALSE}
+two_way <- aov(log(case_rate)~condition * Age_group, data = covid_new)
+summary(two_way)
+```
+<br> Apply Hypothesis tests on all of the three variables.<br>
+1. $H_0:\alpha_1=\alpha_2 = 0$  $H_1:$ Not all of the $\alpha_i = 0$<br>
+```{r, echo=FALSE}
+qf(0.9,5,492)
+```
+<br> F-value for vaccine condition is 206.535 > 1.86, Which means we should reject the null hypothesis test, there is significant difference on infection rates among the vaccination condition groups under confidence level 0.1. <br>
+
+<br>
+2. $H_0:\beta_1=...=\beta_j = 0$  $H_1:$ Not all of the $\beta_j = 0$<br>
+F-value for age group is 2.03 > 1.86, Which means we should reject the null hypothesis test, there is significant difference on infection rates among the age groups under confidence level 0.1. <br>
+
+<br>
+3. $H_0:$ All of $\alpha\beta_{ij} = 0$  $H_1:$ Not all of the $\alpha\beta_{ij} = 0$<br>
+F-value for interaction is 0.924 < 1.86, Which means we cannot reject the null hypothesis test, there is no significant difference on infection rates among the interaction groups under confidence level 0.1. <br>
+
+By doing the three hypothesis tests, we found that infection rates have significant difference under both the age groups and vaccine conditions. We should drop the interaction variable since the hypothesis shows the difference is not significant.<br>
+
+
+
+Then I am going to apply the TukeyHSD test to identify which groups have the most significant differences.
+```{r, echo=FALSE}
+reduced <- aov(log(case_rate)~condition + Age_group, data = covid_new)
+TukeyHSD(reduced)
+```
+<br> We can see that the age groups 30-49 vs 12-17, 80+ vs 30-49 have the highest difference level. We can also see that the difference level between age groups are much smaller than the difference between age conditions.
+
+<br> <font size="4"> Inferential Analysis for death rate</font> <br> 
+```{r, echo=FALSE}
+covid_new_death[covid_new_death==0.000000e+00] <- NA
+covid_new_death <- na.omit(covid_new_death)
+```
+
+```{r}
+two_way_new <- aov(log(death_rate)~condition * Age_group, data = covid_new_death)
+summary(two_way_new)
+```
+<br> Apply Hypothesis tests on all of the three variables.<br>
+1. $H_0:\alpha_1=\alpha_2 = 0$  $H_1:$ Not all of the $\alpha_i = 0$<br>
+```{r}
+qf(0.99,5,398)
+```
+<br> F-value for vaccine condition is 368.13 > 3.06, Which means we should reject the null hypothesis test, there is significant difference on death rates among the vaccination condition groups under confidence level 0.01. <br>
+
+<br>
+2. $H_0:\beta_1=...=\beta_j = 0$  $H_1:$ Not all of the $\beta_j = 0$<br>
+F-value for age group is 465.84 > 3.06, Which means we should reject the null hypothesis test, there is significant difference on infection rates among the age groups under confidence level 0.01. <br>
+
+<br>
+3. $H_0:$ All of $\alpha\beta_{ij} = 0$  $H_1:$ Not all of the $\alpha\beta_{ij} = 0$<br>
+F-value for interaction is 12.37 >3.06, Which means we should reject the null hypothesis test, there is significant difference on infection rates among the interaction groups under confidence level 0.01. <br>
+By doing the three hypothesis tests, we found that death rates have significant difference under the age groups vaccine conditions and interaction rates.<br>
+
+Then I am going to apply the TukeyHSD test to identify which groups have the most significant differences.
+```{r, echo=FALSE}
+reduced_death <- aov(log(death_rate)~condition + Age_group, data = covid_new_death)
+TukeyHSD(reduced_death)
+```
+<br> We can see that the age groups 80+ vs 12-17 has the highest difference level. Which shows the younger people have much lower death rate than the elder people.
+
+<br> <font size="5"> Sensitivity Analysis</font> <br> 
+<br> <font size="4"> Sensitivity Analysis for infection rates</font> <br> 
+<br> We should check the Fitted values plot and the QQ plot to see if the model follows normality and equal variance
+```{r, echo=FALSE} 
+par(mfrow=c(1,2))
+plot(reduced,which = 1)
+plot(reduced,which = 2)
+```
+<br> By checking the two plots, we can find that the model follows the equal variance and normal assumptions.
+
+<br> <font size="4"> Sensitivity Analysis for death rates</font> <br> 
+```{r, echo=FALSE} 
+par(mfrow=c(1,2))
+plot(two_way_new,which = 1)
+plot(two_way_new,which = 2)
+```
+<br> By checking the two plots, we can find that the model follows the equal variance and normal assumptions.
+
+<br> <font size="5"> Casual Inference</font> <br> 
+I think the casual inference doesn't fit my project well. There are two reasons about it.
+First, we do not know the total infection number. We only have weekly infected number but there can exist repeated calculation. Second, there are many death-related factors we do not know. We cannot conclude the reason why person died is casued by covid. Since these two peoblems cannot be solved, I think  casual inference does not apply.
+
+<br> <font size="5"> Conclusion</font> <br> 
+In the Univariant analysis part we found that the vaccinated people had lower infection rate and death rate than the unvaccinated people. The age groups seemes have no difference in infection rates.However, after applying the two-way anova test, we found the infection rate has significant difference under the vaccine condition and age groups. By checking the F-ratio test we can see the difference in vaccine condition more significant than age groups. The difference of vaccine condition is significant under 0.01 confidence level and the age group difference is significant under 0.1 confidence level. In the two-way anova test about death rates, we can find that all of the three variables have significant difference in death rate. I think by doing this project I showed the importance of getting vaccination. People who got fully vaccinated will have significant lower level got covid infected and death probability. For the elder people the death rate can be decreased significantly after getting vaccinated. Promoting vaccination will be helpful to stop the global pandemic and improve the public health situation.
+
+<br> <font size="5"> Acknowledgment</font> <br> 
+My thoughts are inspired by the discussion with Chenyang Zhang, Tianyuan Gu,Sihong Fan and Yichen Hu. 
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+
+```
